@@ -18,3 +18,6 @@ Share links as `https://<your-site>/v/<id>` (or put that in a QR code).
 npm i -g firebase-tools && firebase login
 firebase deploy
 ```
+
+## Samples
+`samples/` holds placeholder JSON to copy into the console: `settings-portal.json` → doc `settings/portal`; `documents-SAMPLE-0001.json` → doc `documents/SAMPLE-0001` (then open `/v/SAMPLE-0001`). Replace the placeholder values and delete the sample record before going live. In the console, `expiryDate` should be entered as a *timestamp* field.

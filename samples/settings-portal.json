@@ -1,0 +1,11 @@
+{
+  "orgName": "YOUR COMPANY NAME",
+  "logoUrl": "https://REPLACE-WITH-YOUR-LOGO-DOWNLOAD-URL",
+  "headerText": "Results Page",
+  "tagline": "Your tagline here",
+  "contactUrl": "https://example.com/contact",
+  "compareText": "Please compare the document you have to the original held in our register below. You may download the original for your copy.",
+  "successText": "Record found in our register",
+  "accentColor": "#0b5fff",
+  "accentColor2": "#5aa0ff"
+}

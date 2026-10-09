@@ -1,0 +1,14 @@
+{
+  "status": "valid",
+  "expiryDate": "2030-12-31T00:00:00Z",
+  "fileUrl": "https://REPLACE-WITH-PDF-DOWNLOAD-URL",
+  "details": [
+    { "label": "Record Type", "value": "SAMPLE – placeholder" },
+    { "label": "Reference No", "value": "SAMPLE-0001" },
+    { "label": "First Name", "value": "Sample" },
+    { "label": "Last Name", "value": "Person" },
+    { "label": "Item", "value": "Placeholder item" },
+    { "label": "Issued", "value": "2026-01-01" },
+    { "label": "Expiry Date", "value": "2030-12-31" }
+  ]
+}
