@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public can read one record if they know its ID, but cannot list/browse.
+    match /documents/{id} {
+      allow get: if true;
+      allow list, write: if false;
+    }
+    match /settings/portal {
+      allow get: if true;
+      allow write: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
