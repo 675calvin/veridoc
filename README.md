@@ -3,7 +3,7 @@
 Static Firebase Hosting site backed by Firestore + Storage. A document is only shown as verified if a matching record exists.
 
 ## Backend data (Firebase console)
-**`settings/portal`** (one doc): `orgName`, `logoUrl` (https download URL of an image uploaded to Storage `branding/`), `headerText`, `tagline`, `contactUrl`, `compareText`, `accentColor` (e.g. `#0b5fff`), `accentColor2`.
+**`settings/portal`** (one doc): `orgName`, `logoUrl` (https download URL of an image uploaded to Storage `branding/`), `headerText`, `tagline`, `contactUrl`, `compareText`, `successText` (headline on a valid record), `accentColor` (e.g. `#0b5fff`), `accentColor2`.
 
 **`documents/{id}`** – use a long random ID (it's the access key; the public can't list documents):
 - `status`: `"valid"` or `"revoked"`

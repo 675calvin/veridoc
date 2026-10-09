@@ -54,15 +54,15 @@ function showSearch(settings, msg) {
     input, el("br"), el("button", { class: "btn", textContent: "Verify", onclick: go })));
 }
 
-function statusOf(rec) {
+function statusOf(rec, settings) {
   if ((rec.status || "valid").toLowerCase() === "revoked") return ["bad", "✕", "This document has been revoked"];
   const exp = toDate(rec.expiryDate);
   if (exp && exp < new Date()) return ["warn", "!", `This document expired on ${fmt(exp)}`];
-  return ["ok", "✓", "Verification was successful"];
+  return ["ok", "✓", settings.successText || "Record found in our register"];
 }
 
 function showResult(settings, rec) {
-  const [cls, glyph, text] = statusOf(rec);
+  const [cls, glyph, text] = statusOf(rec, settings);
   const logo = safeUrl(settings.logoUrl);
   view.replaceChildren(el("div", { class: "card" },
     logo ? el("img", { class: "logo", src: logo, alt: settings.orgName || "" }) : "",
