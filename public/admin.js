@@ -1,6 +1,6 @@
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, Timestamp, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { FONTS, DEFAULT_FOOTER } from "/shared.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
@@ -170,13 +170,29 @@ async function showAdmin(user) {
     inputs[l] = el("input", { type: l === "Expiry Date" ? "date" : "text", required: l === "Document Type" || l === "Lic No" });
   });
   const pdf = el("input", { type: "file", accept: "application/pdf" });
+  let editing = null;   // the record being edited, or null when adding
+  const heading = el("h2", { textContent: "Add a record" });
+  const submitBtn = el("button", { class: "btn", type: "submit", textContent: "Create record" });
+  const cancelBtn = el("button", { class: "small", type: "button", textContent: "Cancel edit", hidden: true, style: "margin-left:12px" });
   const form = el("form", { class: "card" },
-    el("h2", { textContent: "Add a record" }),
+    heading,
     el("div", { class: "warn-note", textContent:
       "Every field below is shown publicly to anyone who has this record's link or QR code. Only enter what you are happy for a verifier to see." }),
     el("div", { class: "grid" }, Object.entries(inputs).map(([l, i]) => field(l, i)),
       field("Attached PDF (optional, max 10 MB)", pdf)),
-    el("button", { class: "btn", type: "submit", textContent: "Create record" }), msg);
+    submitBtn, cancelBtn, msg);
+
+  function setMode(rec) {
+    editing = rec;
+    heading.textContent = rec ? `Edit record – ${holderOf(rec)}` : "Add a record";
+    submitBtn.textContent = rec ? "Save changes" : "Create record";
+    cancelBtn.hidden = !rec;
+    for (const [label, i] of Object.entries(inputs)) i.value = rec ? detail(rec, label) : "";
+    pdf.value = "";
+    if (rec) { say(rec.fileUrl ? "A PDF is attached; choose a file only to replace it." : ""); form.scrollIntoView({ behavior: "smooth" }); }
+    else say("");
+  }
+  cancelBtn.onclick = () => setMode(null);
 
   const tbody = el("tbody");
   const table = el("div", { class: "card" }, el("h2", { textContent: "Records" }),
@@ -197,6 +213,7 @@ async function showAdmin(user) {
           await updateDoc(doc(db, "documents", r.id), { status: next, updatedAt: serverTimestamp(), updatedBy: user.uid });
           refresh();
         } });
+      const edit = el("button", { class: "small", textContent: "Edit", onclick: () => setMode(r) });
       const copy = el("button", { class: "small", textContent: "Copy link",
         onclick: async () => { await navigator.clipboard.writeText(linkFor(r.id)); copy.textContent = "Copied"; } });
       const del = el("button", { class: "small", textContent: "Delete",
@@ -208,7 +225,7 @@ async function showAdmin(user) {
         el("td", { textContent: holderOf(r) }), el("td", { textContent: detail(r, "Document Type") }),
         el("td", { textContent: detail(r, "Lic No") }), el("td", { textContent: fmt(exp) }),
         el("td", {}, el("span", { class: "pill " + cls, textContent: label })),
-        el("td", {}, toggle, copy, del));
+        el("td", {}, edit, toggle, copy, del));
     }));
   }
 
@@ -216,7 +233,7 @@ async function showAdmin(user) {
     e.preventDefault();
     const btn = form.querySelector("button[type=submit]"); btn.disabled = true; say("Saving…");
     try {
-      const id = newId();
+      const id = editing ? editing.id : newId();
       let fileUrl = "";
       const file = pdf.files[0];
       if (file) {
@@ -227,6 +244,15 @@ async function showAdmin(user) {
       const details = Object.entries(inputs)
         .map(([label, i]) => ({ label, value: i.value.trim() })).filter(d => d.value);
       const expiry = inputs["Expiry Date"].value;
+      if (editing) {
+        const upd = { details, expiryDate: expiry ? Timestamp.fromDate(new Date(expiry + "T23:59:59")) : deleteField(),
+          updatedAt: serverTimestamp(), updatedBy: user.uid };
+        if (fileUrl) upd.fileUrl = fileUrl;
+        await updateDoc(doc(db, "documents", id), upd);
+        setMode(null); say("Changes saved. The existing link is unchanged.");
+        refresh();
+        return;
+      }
       const rec = { status: "valid", details, createdAt: serverTimestamp(), createdBy: user.uid };
       if (fileUrl) rec.fileUrl = fileUrl;
       if (expiry) rec.expiryDate = Timestamp.fromDate(new Date(expiry + "T23:59:59"));
