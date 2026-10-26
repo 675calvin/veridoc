@@ -33,7 +33,13 @@ async function loadSettings() {
     const s = (await getDoc(doc(db, "settings", "portal"))).data() || {};
     if (s.accentColor) document.documentElement.style.setProperty("--accent", s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty("--accent2", s.accentColor2);
-    document.title = s.orgName ? `${s.orgName} – Weapons & Credential Verification` : document.title;
+    document.title = s.pageTitle || (s.orgName ? `${s.orgName} – Weapons & Credential Verification` : document.title);
+    const fav = safeUrl(s.faviconUrl);
+    if (fav) {
+      let l = document.querySelector("link[rel~='icon']");
+      if (!l) { l = document.createElement("link"); l.rel = "icon"; document.head.append(l); }
+      l.removeAttribute("type"); l.href = fav;
+    }
     document.getElementById("hdrTitle").textContent = s.headerText || "Results Page";
     const logo = safeUrl(s.logoUrl);
     if (logo) { const i = document.getElementById("hdrLogo"); i.src = logo; i.alt = s.orgName || ""; i.hidden = false; }

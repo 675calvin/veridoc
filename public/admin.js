@@ -103,9 +103,11 @@ function settingsPanel() {
   const msg = el("p", { class: "msg" });
   const say = (t, bad) => { msg.textContent = t; msg.className = "msg " + (bad ? "bad" : "ok"); };
   const logoFile = el("input", { type: "file", accept: "image/png,image/jpeg,image/svg+xml,image/webp" });
+  const faviconFile = el("input", { type: "file", accept: "image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,image/webp" });
+  const favPreview = el("img", { alt: "Current favicon", style: "max-height:32px;display:block;margin-top:6px", hidden: true });
   const preview = el("img", { alt: "Current logo", style: "max-height:56px;display:block;margin-top:6px", hidden: true });
   const i = {
-    orgName: el("input"), headerText: el("input"), contactUrl: el("input", { type: "url", placeholder: "https://" }),
+    pageTitle: el("input", { placeholder: "Shown in the browser tab" }), orgName: el("input"), headerText: el("input"), contactUrl: el("input", { type: "url", placeholder: "https://" }),
     footerTagline: el("input"),
     footerText: el("textarea", { rows: 3 }),
     footerFont: el("select", {}, Object.entries(FONTS).map(([k, [name]]) => el("option", { value: k, textContent: name }))),
@@ -114,11 +116,14 @@ function settingsPanel() {
     accentColor: el("input", { type: "color", value: "#058141" }),
     accentColor2: el("input", { type: "color", value: "#75b943" })
   };
-  let logoUrl = "";
+  let logoUrl = "", faviconUrl = "";
   getDoc(doc(db, "settings", "portal")).then(snap => {
     const d = { ...DEFAULT_FOOTER, ...(snap.data() || {}) };
     logoUrl = d.logoUrl || "";
     if (logoUrl) { preview.src = logoUrl; preview.hidden = false; }
+    faviconUrl = d.faviconUrl || "";
+    if (faviconUrl) { favPreview.src = faviconUrl; favPreview.hidden = false; }
+    i.pageTitle.value = d.pageTitle || "";
     i.orgName.value = d.orgName || ""; i.headerText.value = d.headerText || ""; i.contactUrl.value = d.contactUrl || "";
     i.footerTagline.value = d.footerTagline ?? d.tagline ?? "";
     i.footerText.value = d.footerText ?? (d.orgName ? `© COPYRIGHT | ALL RIGHTS RESERVED, ${d.orgName}` : "");
@@ -129,6 +134,8 @@ function settingsPanel() {
   }).catch(() => say("Could not load settings.", true));
   const form = el("form", { class: "card" }, el("h2", { textContent: "Branding & footer" }),
     el("div", { class: "grid" },
+      field("Page title (browser tab)", i.pageTitle),
+      el("label", {}, "Favicon (PNG/ICO/SVG/WebP, max 2 MB, square works best)", faviconFile, favPreview),
       field("Company name", i.orgName), field("Header title", i.headerText),
       el("label", {}, "Logo (top left, PNG/JPG/SVG/WebP, max 2 MB)", logoFile, preview),
       field("Contact link (shown in footer)", i.contactUrl),
@@ -150,14 +157,22 @@ function settingsPanel() {
         logoUrl = await getDownloadURL(r);
         preview.src = logoUrl; preview.hidden = false;
       }
+      const ff = faviconFile.files[0];
+      if (ff) {
+        if (ff.size > 2 * 1024 * 1024) throw new Error("Favicon is over 2 MB");
+        const r = ref(storage, `branding/favicon-${Date.now()}`);
+        await uploadBytes(r, ff, { contentType: ff.type || "image/x-icon" });
+        faviconUrl = await getDownloadURL(r);
+        favPreview.src = faviconUrl; favPreview.hidden = false;
+      }
       const size = Math.min(40, Math.max(10, Number(i.footerFontSize.value) || DEFAULT_FOOTER.footerFontSize));
       await setDoc(doc(db, "settings", "portal"), {
         orgName: i.orgName.value.trim(), headerText: i.headerText.value.trim(), contactUrl: i.contactUrl.value.trim(),
-        logoUrl, footerTagline: i.footerTagline.value.trim(), footerText: i.footerText.value,
+        logoUrl, faviconUrl, pageTitle: i.pageTitle.value.trim(), footerTagline: i.footerTagline.value.trim(), footerText: i.footerText.value,
         footerFont: i.footerFont.value, footerFontSize: size, footerColor: i.footerColor.value,
         accentColor: i.accentColor.value, accentColor2: i.accentColor2.value
       }, { merge: true });
-      logoFile.value = ""; say("Saved.");
+      logoFile.value = ""; faviconFile.value = ""; say("Saved.");
     } catch (err) { say("Could not save: " + (err.code || err.message), true); }
     finally { btn.disabled = false; }
   };
