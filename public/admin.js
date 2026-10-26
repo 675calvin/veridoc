@@ -110,7 +110,9 @@ function settingsPanel() {
     footerText: el("textarea", { rows: 3 }),
     footerFont: el("select", {}, Object.entries(FONTS).map(([k, [name]]) => el("option", { value: k, textContent: name }))),
     footerFontSize: el("input", { type: "number", min: 10, max: 40 }),
-    footerColor: el("input", { type: "color" })
+    footerColor: el("input", { type: "color" }),
+    accentColor: el("input", { type: "color", value: "#058141" }),
+    accentColor2: el("input", { type: "color", value: "#75b943" })
   };
   let logoUrl = "";
   getDoc(doc(db, "settings", "portal")).then(snap => {
@@ -122,12 +124,15 @@ function settingsPanel() {
     i.footerText.value = d.footerText ?? (d.orgName ? `© COPYRIGHT | ALL RIGHTS RESERVED, ${d.orgName}` : "");
     i.footerFont.value = FONTS[d.footerFont] ? d.footerFont : "system";
     i.footerFontSize.value = d.footerFontSize; i.footerColor.value = d.footerColor;
+    if (d.accentColor) i.accentColor.value = d.accentColor;
+    if (d.accentColor2) i.accentColor2.value = d.accentColor2;
   }).catch(() => say("Could not load settings.", true));
   const form = el("form", { class: "card" }, el("h2", { textContent: "Branding & footer" }),
     el("div", { class: "grid" },
       field("Company name", i.orgName), field("Header title", i.headerText),
       el("label", {}, "Logo (top left, PNG/JPG/SVG/WebP, max 2 MB)", logoFile, preview),
-      field("Contact link (shown in footer)", i.contactUrl)),
+      field("Contact link (shown in footer)", i.contactUrl),
+      field("Theme colour – start (buttons & headings)", i.accentColor), field("Theme colour – end", i.accentColor2)),
     el("h2", { textContent: "Footer", style: "margin-top:16px" }),
     el("div", { class: "grid" }, field("Footer heading", i.footerTagline), field("Font", i.footerFont),
       field("Font size (px, 10–40)", i.footerFontSize), field("Text colour", i.footerColor)),
@@ -149,7 +154,8 @@ function settingsPanel() {
       await setDoc(doc(db, "settings", "portal"), {
         orgName: i.orgName.value.trim(), headerText: i.headerText.value.trim(), contactUrl: i.contactUrl.value.trim(),
         logoUrl, footerTagline: i.footerTagline.value.trim(), footerText: i.footerText.value,
-        footerFont: i.footerFont.value, footerFontSize: size, footerColor: i.footerColor.value
+        footerFont: i.footerFont.value, footerFontSize: size, footerColor: i.footerColor.value,
+        accentColor: i.accentColor.value, accentColor2: i.accentColor2.value
       }, { merge: true });
       logoFile.value = ""; say("Saved.");
     } catch (err) { say("Could not save: " + (err.code || err.message), true); }
