@@ -9,7 +9,7 @@ Static Firebase Hosting site backed by Firestore + Storage. A document is only s
 - `status`: `"valid"` or `"revoked"`
 - `expiryDate`: timestamp (optional; expired shows a warning instead of success)
 - `fileUrl`: https download URL of the PDF uploaded to Storage `documents/`
-- `details`: array of maps, e.g. `[{label:"Record Type", value:"..."}, {label:"Holder", value:"..."}]` (the admin page writes Holder, Record Type, Reference No, Issued, Expiry Date)
+- `details`: array of maps, e.g. `[{label:"Document Type", value:"..."}, {label:"Lic No", value:"..."}]` (the admin page writes Document Type, Lic No, First Name, Last Name, Address, Make, Type, Calibre, Purpose, Expiry Date, SN, Transaction Id, Hash)
 
 Share links as `https://<your-site>/v/<id>` (or put that in a QR code).
 
@@ -22,7 +22,7 @@ Staff sign in with Firebase Auth (email/password) and can create, revoke/reinsta
 
 Tip: to stop anyone self-registering accounts, Authentication → Settings → User actions → disable "Enable create (sign-up)". The staff panel creates users via the client, so keep sign-up enabled if you want to add staff from `/admin`; self-registered accounts have no access anyway.
 
-**Privacy:** record pages are public to anyone with the link. Only put what a verifier needs (holder, type, reference, dates). Never serial numbers, addresses or ID numbers, in fields or in PDFs.
+**Privacy:** every record field is public to anyone with the link, so use long random IDs (the admin page does) and share links only with the intended verifier.
 
 ## Deploy
 ```

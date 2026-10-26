@@ -1,6 +1,7 @@
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { FONTS, DEFAULT_FOOTER } from "/shared.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
@@ -29,6 +30,7 @@ const field = (label, input) => el("label", {}, label, input);
 const toDate = v => v?.toDate ? v.toDate() : v ? new Date(v) : null;
 const fmt = d => d && !isNaN(d) ? d.toISOString().slice(0, 10) : "";
 const detail = (rec, label) => (rec.details || []).find(d => d.label === label)?.value || "";
+const holderOf = r => [detail(r, "First Name"), detail(r, "Last Name")].filter(Boolean).join(" ") || "(unnamed)";
 const linkFor = id => `${location.origin}/v/${encodeURIComponent(id)}`;
 const newId = () => {
   const b = crypto.getRandomValues(new Uint8Array(16));
@@ -97,31 +99,88 @@ function staffPanel() {
     el("table", {}, el("thead", {}, el("tr", {}, el("th", { textContent: "Email" }), el("th"))), tbody));
 }
 
+function settingsPanel() {
+  const msg = el("p", { class: "msg" });
+  const say = (t, bad) => { msg.textContent = t; msg.className = "msg " + (bad ? "bad" : "ok"); };
+  const logoFile = el("input", { type: "file", accept: "image/png,image/jpeg,image/svg+xml,image/webp" });
+  const preview = el("img", { alt: "Current logo", style: "max-height:56px;display:block;margin-top:6px", hidden: true });
+  const i = {
+    orgName: el("input"), headerText: el("input"), contactUrl: el("input", { type: "url", placeholder: "https://" }),
+    footerTagline: el("input"),
+    footerText: el("textarea", { rows: 3 }),
+    footerFont: el("select", {}, Object.entries(FONTS).map(([k, [name]]) => el("option", { value: k, textContent: name }))),
+    footerFontSize: el("input", { type: "number", min: 10, max: 40 }),
+    footerColor: el("input", { type: "color" })
+  };
+  let logoUrl = "";
+  getDoc(doc(db, "settings", "portal")).then(snap => {
+    const d = { ...DEFAULT_FOOTER, ...(snap.data() || {}) };
+    logoUrl = d.logoUrl || "";
+    if (logoUrl) { preview.src = logoUrl; preview.hidden = false; }
+    i.orgName.value = d.orgName || ""; i.headerText.value = d.headerText || ""; i.contactUrl.value = d.contactUrl || "";
+    i.footerTagline.value = d.footerTagline ?? d.tagline ?? "";
+    i.footerText.value = d.footerText ?? (d.orgName ? `© COPYRIGHT | ALL RIGHTS RESERVED, ${d.orgName}` : "");
+    i.footerFont.value = FONTS[d.footerFont] ? d.footerFont : "system";
+    i.footerFontSize.value = d.footerFontSize; i.footerColor.value = d.footerColor;
+  }).catch(() => say("Could not load settings.", true));
+  const form = el("form", { class: "card" }, el("h2", { textContent: "Branding & footer" }),
+    el("div", { class: "grid" },
+      field("Company name", i.orgName), field("Header title", i.headerText),
+      el("label", {}, "Logo (top left, PNG/JPG/SVG/WebP, max 2 MB)", logoFile, preview),
+      field("Contact link (shown in footer)", i.contactUrl)),
+    el("h2", { textContent: "Footer", style: "margin-top:16px" }),
+    el("div", { class: "grid" }, field("Footer heading", i.footerTagline), field("Font", i.footerFont),
+      field("Font size (px, 10–40)", i.footerFontSize), field("Text colour", i.footerColor)),
+    field("Footer text", i.footerText),
+    el("button", { class: "btn", type: "submit", textContent: "Save branding" }), msg);
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const btn = form.querySelector("button[type=submit]"); btn.disabled = true; say("Saving…");
+    try {
+      const f = logoFile.files[0];
+      if (f) {
+        if (f.size > 2 * 1024 * 1024) throw new Error("Logo is over 2 MB");
+        const r = ref(storage, `branding/logo-${Date.now()}`);
+        await uploadBytes(r, f, { contentType: f.type });
+        logoUrl = await getDownloadURL(r);
+        preview.src = logoUrl; preview.hidden = false;
+      }
+      const size = Math.min(40, Math.max(10, Number(i.footerFontSize.value) || DEFAULT_FOOTER.footerFontSize));
+      await setDoc(doc(db, "settings", "portal"), {
+        orgName: i.orgName.value.trim(), headerText: i.headerText.value.trim(), contactUrl: i.contactUrl.value.trim(),
+        logoUrl, footerTagline: i.footerTagline.value.trim(), footerText: i.footerText.value,
+        footerFont: i.footerFont.value, footerFontSize: size, footerColor: i.footerColor.value
+      }, { merge: true });
+      logoFile.value = ""; say("Saved.");
+    } catch (err) { say("Could not save: " + (err.code || err.message), true); }
+    finally { btn.disabled = false; }
+  };
+  return form;
+}
+
 async function showAdmin(user) {
   signOutBtn.hidden = false;
   const msg = el("p", { class: "msg" });
   const say = (t, bad) => { msg.textContent = t; msg.className = "msg " + (bad ? "bad" : "ok"); };
 
-  const f = {
-    holder: el("input", { required: true }),
-    type: el("input", { required: true, placeholder: "e.g. Firearms licence, Guard authorisation" }),
-    ref: el("input", { required: true }),
-    issued: el("input", { type: "date" }),
-    expiry: el("input", { type: "date" }),
-    file: el("input", { type: "file", accept: "application/pdf" })
-  };
+  const TEXT = ["Document Type", "Lic No", "First Name", "Last Name", "Address", "Make", "Type", "Calibre", "Purpose"];
+  const TAIL = ["SN", "Transaction Id", "Hash"];
+  const inputs = {};
+  [...TEXT, "Expiry Date", ...TAIL].forEach(l => {
+    inputs[l] = el("input", { type: l === "Expiry Date" ? "date" : "text", required: l === "Document Type" || l === "Lic No" });
+  });
+  const pdf = el("input", { type: "file", accept: "application/pdf" });
   const form = el("form", { class: "card" },
     el("h2", { textContent: "Add a record" }),
     el("div", { class: "warn-note", textContent:
-      "Everything below is shown to anyone who has the link or QR code. Do not enter serial numbers, home addresses, ID numbers or other private data here, and do not upload PDFs that contain them." }),
-    el("div", { class: "grid" },
-      field("Holder name", f.holder), field("Record type", f.type), field("Reference number", f.ref),
-      field("Issued", f.issued), field("Expiry", f.expiry), field("Supporting PDF (max 10 MB)", f.file)),
+      "Every field below is shown publicly to anyone who has this record's link or QR code. Only enter what you are happy for a verifier to see." }),
+    el("div", { class: "grid" }, Object.entries(inputs).map(([l, i]) => field(l, i)),
+      field("Attached PDF (optional, max 10 MB)", pdf)),
     el("button", { class: "btn", type: "submit", textContent: "Create record" }), msg);
 
   const tbody = el("tbody");
   const table = el("div", { class: "card" }, el("h2", { textContent: "Records" }),
-    el("table", {}, el("thead", {}, el("tr", {}, ["Holder", "Type", "Ref", "Expiry", "Status", ""].map(t => el("th", { textContent: t })))), tbody));
+    el("table", {}, el("thead", {}, el("tr", {}, ["Name", "Document Type", "Lic No", "Expiry", "Status", ""].map(t => el("th", { textContent: t })))), tbody));
 
   async function refresh() {
     const snaps = await getDocs(collection(db, "documents"));
@@ -134,7 +193,7 @@ async function showAdmin(user) {
       const toggle = el("button", { class: "small", textContent: r.status === "revoked" ? "Reinstate" : "Revoke",
         onclick: async () => {
           const next = r.status === "revoked" ? "valid" : "revoked";
-          if (!confirm(`${next === "revoked" ? "Revoke" : "Reinstate"} ${detail(r, "Holder")}'s record?`)) return;
+          if (!confirm(`${next === "revoked" ? "Revoke" : "Reinstate"} ${holderOf(r)}'s record?`)) return;
           await updateDoc(doc(db, "documents", r.id), { status: next, updatedAt: serverTimestamp(), updatedBy: user.uid });
           refresh();
         } });
@@ -146,8 +205,8 @@ async function showAdmin(user) {
           await deleteDoc(doc(db, "documents", r.id)); refresh();
         } });
       return el("tr", {},
-        el("td", { textContent: detail(r, "Holder") }), el("td", { textContent: detail(r, "Record Type") }),
-        el("td", { textContent: detail(r, "Reference No") }), el("td", { textContent: fmt(exp) }),
+        el("td", { textContent: holderOf(r) }), el("td", { textContent: detail(r, "Document Type") }),
+        el("td", { textContent: detail(r, "Lic No") }), el("td", { textContent: fmt(exp) }),
         el("td", {}, el("span", { class: "pill " + cls, textContent: label })),
         el("td", {}, toggle, copy, del));
     }));
@@ -159,22 +218,18 @@ async function showAdmin(user) {
     try {
       const id = newId();
       let fileUrl = "";
-      const file = f.file.files[0];
+      const file = pdf.files[0];
       if (file) {
         const r = ref(storage, `documents/${id}.pdf`);
         await uploadBytes(r, file, { contentType: "application/pdf" });
         fileUrl = await getDownloadURL(r);
       }
-      const details = [
-        { label: "Holder", value: f.holder.value.trim() },
-        { label: "Record Type", value: f.type.value.trim() },
-        { label: "Reference No", value: f.ref.value.trim() },
-        ...(f.issued.value ? [{ label: "Issued", value: f.issued.value }] : []),
-        ...(f.expiry.value ? [{ label: "Expiry Date", value: f.expiry.value }] : [])
-      ];
+      const details = Object.entries(inputs)
+        .map(([label, i]) => ({ label, value: i.value.trim() })).filter(d => d.value);
+      const expiry = inputs["Expiry Date"].value;
       const rec = { status: "valid", details, createdAt: serverTimestamp(), createdBy: user.uid };
       if (fileUrl) rec.fileUrl = fileUrl;
-      if (f.expiry.value) rec.expiryDate = Timestamp.fromDate(new Date(f.expiry.value + "T23:59:59"));
+      if (expiry) rec.expiryDate = Timestamp.fromDate(new Date(expiry + "T23:59:59"));
       await setDoc(doc(db, "documents", id), rec);
       form.reset();
       say("Created. Link: " + linkFor(id));
@@ -184,7 +239,7 @@ async function showAdmin(user) {
     } finally { btn.disabled = false; }
   };
 
-  view.replaceChildren(el("div", { class: "admin" }, ...(isSuper(user) ? [staffPanel()] : []), form, table));
+  view.replaceChildren(el("div", { class: "admin" }, ...(isSuper(user) ? [staffPanel()] : []), form, table, settingsPanel()));
   refresh().catch(() => say("Could not load records.", true));
 }
 

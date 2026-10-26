@@ -3,10 +3,57 @@
   "expiryDate": "2030-12-31T00:00:00Z",
   "fileUrl": "https://REPLACE-WITH-PDF-DOWNLOAD-URL",
   "details": [
-    { "label": "Holder", "value": "Sample Person" },
-    { "label": "Record Type", "value": "SAMPLE – Guard authorisation" },
-    { "label": "Reference No", "value": "SAMPLE-0001" },
-    { "label": "Issued", "value": "2026-01-01" },
-    { "label": "Expiry Date", "value": "2030-12-31" }
+    {
+      "label": "Document Type",
+      "value": "SAMPLE"
+    },
+    {
+      "label": "Lic No",
+      "value": "SAMPLE-0001"
+    },
+    {
+      "label": "First Name",
+      "value": "Sample"
+    },
+    {
+      "label": "Last Name",
+      "value": "Person"
+    },
+    {
+      "label": "Address",
+      "value": "1 Example Street"
+    },
+    {
+      "label": "Make",
+      "value": "Sample Make"
+    },
+    {
+      "label": "Type",
+      "value": "Sample"
+    },
+    {
+      "label": "Calibre",
+      "value": "0.00"
+    },
+    {
+      "label": "Purpose",
+      "value": "Sample"
+    },
+    {
+      "label": "Expiry Date",
+      "value": "2030-12-31"
+    },
+    {
+      "label": "SN",
+      "value": "000000"
+    },
+    {
+      "label": "Transaction Id",
+      "value": "TX-0000"
+    },
+    {
+      "label": "Hash",
+      "value": "0000"
+    }
   ]
 }

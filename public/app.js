@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { FONTS, DEFAULT_FOOTER } from "/shared.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyDHHcV4wm6DNg2ygrsdqUuRDBy3NmQ7aJo",
@@ -36,8 +37,15 @@ async function loadSettings() {
     document.getElementById("hdrTitle").textContent = s.headerText || "Results Page";
     const logo = safeUrl(s.logoUrl);
     if (logo) { const i = document.getElementById("hdrLogo"); i.src = logo; i.alt = s.orgName || ""; i.hidden = false; }
-    document.getElementById("ftTag").textContent = s.tagline || "";
-    document.getElementById("ftCopy").textContent = `© COPYRIGHT | ALL RIGHTS RESERVED, ${s.orgName || ""}`;
+    const footer = document.querySelector("footer");
+    const d = { ...DEFAULT_FOOTER, ...s };
+    footer.style.fontFamily = (FONTS[d.footerFont] || FONTS.system)[1];
+    const size = Number(d.footerFontSize);
+    footer.style.fontSize = (size >= 10 && size <= 40 ? size : DEFAULT_FOOTER.footerFontSize) + "px";
+    if (/^#[0-9a-f]{3,8}$/i.test(d.footerColor)) footer.style.color = d.footerColor;
+    document.getElementById("ftTag").textContent = s.footerTagline ?? s.tagline ?? "";
+    document.getElementById("ftCopy").textContent = s.footerText ??
+      `© COPYRIGHT | ALL RIGHTS RESERVED, ${s.orgName || ""}`;
     const c = document.getElementById("ftContact");
     if (s.contactUrl) c.append("Have a question? ", el("a", { href: safeUrl(s.contactUrl), textContent: "Contact us" }));
     return s;
