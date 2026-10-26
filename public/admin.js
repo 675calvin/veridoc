@@ -1,16 +1,19 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-const app = initializeApp({
+const firebaseConfig = {
   apiKey: "AIzaSyDHHcV4wm6DNg2ygrsdqUuRDBy3NmQ7aJo",
   authDomain: "veridoc-d62d0.firebaseapp.com",
   projectId: "veridoc-d62d0",
   storageBucket: "veridoc-d62d0.firebasestorage.app",
   messagingSenderId: "78313165670",
   appId: "1:78313165670:web:6a9be36cdca3f115d0eea7"
-});
+};
+const app = initializeApp(firebaseConfig);
+const SUPER_EMAIL = "check@veri.com";   // must match firestore.rules / storage.rules
+const isSuper = u => u.email?.toLowerCase() === SUPER_EMAIL && u.emailVerified;
 const auth = getAuth(app), db = getFirestore(app), storage = getStorage(app);
 const view = document.getElementById("view");
 const signOutBtn = document.getElementById("signOut");
@@ -48,8 +51,62 @@ function showLogin(msg) {
   view.replaceChildren(form);
 }
 
+function showVerify(user) {
+  signOutBtn.hidden = false;
+  const msg = el("p", { class: "msg" });
+  view.replaceChildren(el("div", { class: "card", style: "max-width:520px;margin:0 auto" },
+    el("h2", { textContent: "Verify the super admin email" }),
+    el("p", { textContent: "Super admin access requires a verified email address. Send yourself the verification link, open it, then reload this page." }),
+    el("button", { class: "btn", textContent: "Send verification email", onclick: async () => {
+      try { await sendEmailVerification(user); msg.textContent = "Sent. Check your inbox."; }
+      catch (e) { msg.textContent = "Could not send: " + (e.code || e.message); }
+    } }), msg));
+}
+
 async function isAdmin(user) {
+  if (isSuper(user)) return true;
   try { return (await getDoc(doc(db, "admins", user.uid))).exists(); } catch { return false; }
+}
+
+function staffPanel() {
+  const msg = el("p", { class: "msg" });
+  const say = (t, bad) => { msg.textContent = t; msg.className = "msg " + (bad ? "bad" : "ok"); };
+  const email = el("input", { type: "email", required: true });
+  const pass = el("input", { type: "password", minLength: 8, required: true, autocomplete: "new-password" });
+  const tbody = el("tbody");
+  async function load() {
+    const snaps = await getDocs(collection(db, "admins"));
+    tbody.replaceChildren(...snaps.docs.map(s => el("tr", {},
+      el("td", { textContent: s.data().email || s.id }),
+      el("td", {}, el("button", { class: "small", textContent: "Remove access", onclick: async () => {
+        if (!confirm(`Remove staff access for ${s.data().email || s.id}?`)) return;
+        await deleteDoc(doc(db, "admins", s.id)); load();
+      } }),
+      el("button", { class: "small", textContent: "Send password reset", onclick: async () => {
+        if (s.data().email) { await sendPasswordResetEmail(auth, s.data().email); say("Reset email sent."); }
+      } })))));
+  }
+  const form = el("form", {}, el("div", { class: "grid" },
+    field("Staff email", email), field("Temporary password (min 8)", pass)),
+    el("button", { class: "btn", type: "submit", textContent: "Add staff user" }), msg);
+  form.onsubmit = async e => {
+    e.preventDefault(); say("Adding…");
+    // A second app instance so creating the account doesn't sign the super admin out.
+    const second = initializeApp(firebaseConfig, "staff-create-" + Date.now());
+    try {
+      const a2 = getAuth(second);
+      const cred = await createUserWithEmailAndPassword(a2, email.value.trim(), pass.value);
+      await setDoc(doc(db, "admins", cred.user.uid),
+        { email: email.value.trim().toLowerCase(), addedBy: auth.currentUser.uid, createdAt: serverTimestamp() });
+      await signOut(a2);
+      form.reset(); say("Staff user added. Share the temporary password securely."); load();
+    } catch (err) {
+      say("Could not add user: " + (err.code || err.message), true);
+    } finally { deleteApp(second); }
+  };
+  load().catch(() => say("Could not load staff list.", true));
+  return el("div", { class: "card" }, el("h2", { textContent: "Staff users (super admin)" }), form,
+    el("table", {}, el("thead", {}, el("tr", {}, el("th", { textContent: "Email" }), el("th"))), tbody));
 }
 
 async function showAdmin(user) {
@@ -139,12 +196,13 @@ async function showAdmin(user) {
     } finally { btn.disabled = false; }
   };
 
-  view.replaceChildren(el("div", { class: "admin" }, form, table));
+  view.replaceChildren(el("div", { class: "admin" }, ...(isSuper(user) ? [staffPanel()] : []), form, table));
   refresh().catch(() => say("Could not load records.", true));
 }
 
 onAuthStateChanged(auth, async user => {
   if (!user) return showLogin();
+  if (user.email?.toLowerCase() === SUPER_EMAIL && !user.emailVerified) return showVerify(user);
   if (await isAdmin(user)) return showAdmin(user);
   await signOut(auth);
   showLogin("This account is not authorised for staff access.");

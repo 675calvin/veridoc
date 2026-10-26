@@ -1,10 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Staff are listed in admins/{uid} (created by hand in the console).
-    function isAdmin() {
+    // Super admin is hard-coded by email. email_verified is required so nobody
+    // can take over the role by registering this address without owning it.
+    function isSuper() {
       return request.auth != null &&
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+        request.auth.token.email == 'check@veri.com' &&
+        request.auth.token.email_verified == true;
+    }
+    // Other staff are listed in admins/{uid}, managed by the super admin.
+    function isAdmin() {
+      return isSuper() || (request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
 
     // Public can read one record if they know its ID, but cannot list/browse.
@@ -20,7 +27,7 @@ service cloud.firestore {
     }
     match /admins/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
-      allow list, write: if false;
+      allow get, list, create, update, delete: if isSuper();
     }
     match /{document=**} { allow read, write: if false; }
   }
