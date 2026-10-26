@@ -1,5 +1,5 @@
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
@@ -13,7 +13,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const SUPER_EMAIL = "check@veri.com";   // must match firestore.rules / storage.rules
-const isSuper = u => u.email?.toLowerCase() === SUPER_EMAIL && u.emailVerified;
+const isSuper = u => u.email?.toLowerCase() === SUPER_EMAIL;
 const auth = getAuth(app), db = getFirestore(app), storage = getStorage(app);
 const view = document.getElementById("view");
 const signOutBtn = document.getElementById("signOut");
@@ -49,18 +49,6 @@ function showLogin(msg) {
     catch { err.textContent = "Sign-in failed."; }
   };
   view.replaceChildren(form);
-}
-
-function showVerify(user) {
-  signOutBtn.hidden = false;
-  const msg = el("p", { class: "msg" });
-  view.replaceChildren(el("div", { class: "card", style: "max-width:520px;margin:0 auto" },
-    el("h2", { textContent: "Verify the super admin email" }),
-    el("p", { textContent: "Super admin access requires a verified email address. Send yourself the verification link, open it, then reload this page." }),
-    el("button", { class: "btn", textContent: "Send verification email", onclick: async () => {
-      try { await sendEmailVerification(user); msg.textContent = "Sent. Check your inbox."; }
-      catch (e) { msg.textContent = "Could not send: " + (e.code || e.message); }
-    } }), msg));
 }
 
 async function isAdmin(user) {
@@ -202,7 +190,6 @@ async function showAdmin(user) {
 
 onAuthStateChanged(auth, async user => {
   if (!user) return showLogin();
-  if (user.email?.toLowerCase() === SUPER_EMAIL && !user.emailVerified) return showVerify(user);
   if (await isAdmin(user)) return showAdmin(user);
   await signOut(auth);
   showLogin("This account is not authorised for staff access.");

@@ -17,9 +17,8 @@ Share links as `https://<your-site>/v/<id>` (or put that in a QR code).
 Staff sign in with Firebase Auth (email/password) and can create, revoke/reinstate, delete records and copy share links. IDs are 128-bit random.
 
 **Super admin:** `check@veri.com` is hard-coded in `firestore.rules`, `storage.rules` and `public/admin.js`. It gets a "Staff users" panel on `/admin` to add staff (creates their login and the `admins/<uid>` doc), remove access, or send password resets. Setup, once:
-1. Firebase console → Authentication → enable **Email/Password** and add a user `check@veri.com`.
-2. Open `/admin`, sign in, and use "Send verification email" (rules require a *verified* email, so nobody can take over the role by registering that address). Click the link, reload.
-3. `firebase deploy` (publishes rules too).
+1. Firebase console → Authentication → enable **Email/Password**, then add the user `check@veri.com` with a strong password. **Do this before deploying the rules**: there is no email verification, so whoever registers that address first owns super admin.
+2. `firebase deploy` (publishes rules too), then sign in at `/admin`.
 
 Tip: to stop anyone self-registering accounts, Authentication → Settings → User actions → disable "Enable create (sign-up)". The staff panel creates users via the client, so keep sign-up enabled if you want to add staff from `/admin`; self-registered accounts have no access anyway.
 
