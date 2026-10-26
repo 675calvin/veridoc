@@ -32,7 +32,7 @@ async function loadSettings() {
     const s = (await getDoc(doc(db, "settings", "portal"))).data() || {};
     if (s.accentColor) document.documentElement.style.setProperty("--accent", s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty("--accent2", s.accentColor2);
-    document.title = s.orgName ? `${s.orgName} – Document Verification` : document.title;
+    document.title = s.orgName ? `${s.orgName} – Weapons & Credential Verification` : document.title;
     document.getElementById("hdrTitle").textContent = s.headerText || "Results Page";
     const logo = safeUrl(s.logoUrl);
     if (logo) { const i = document.getElementById("hdrLogo"); i.src = logo; i.alt = s.orgName || ""; i.hidden = false; }
@@ -45,19 +45,19 @@ async function loadSettings() {
 }
 
 function showSearch(settings, msg) {
-  const input = el("input", { placeholder: "Enter document ID", autofocus: true });
+  const input = el("input", { placeholder: "Enter reference ID", autofocus: true });
   const go = () => input.value.trim() && (location.href = "/v/" + encodeURIComponent(input.value.trim()));
   input.addEventListener("keydown", e => e.key === "Enter" && go());
   view.replaceChildren(el("div", { class: "card" },
-    el("h1", { textContent: "Verify a document" }),
+    el("h1", { textContent: "Verify a weapons record" }),
     msg ? el("p", { class: "bad", textContent: msg }) : "",
     input, el("br"), el("button", { class: "btn", textContent: "Verify", onclick: go })));
 }
 
 function statusOf(rec, settings) {
-  if ((rec.status || "valid").toLowerCase() === "revoked") return ["bad", "✕", "This document has been revoked"];
+  if ((rec.status || "valid").toLowerCase() === "revoked") return ["bad", "✕", "This authorisation has been revoked"];
   const exp = toDate(rec.expiryDate);
-  if (exp && exp < new Date()) return ["warn", "!", `This document expired on ${fmt(exp)}`];
+  if (exp && exp < new Date()) return ["warn", "!", `This authorisation expired on ${fmt(exp)}`];
   return ["ok", "✓", settings.successText || "Record found in our register"];
 }
 
@@ -83,7 +83,7 @@ function showDetails(settings, rec) {
     el("div", {},
       el("div", { class: "note", textContent: settings.compareText ||
         "Please compare the document you have to the original document held by the issuer below. You may download the original for your copy." }),
-      el("div", { class: "panel" }, el("h2", { textContent: "Document Details" }), rows)),
+      el("div", { class: "panel" }, el("h2", { textContent: "Record Details" }), rows)),
     el("div", {}, right)));
 }
 
@@ -93,9 +93,9 @@ function showDetails(settings, rec) {
   if (!id) return showSearch(settings);
   try {
     const snap = await getDoc(doc(db, "documents", id));
-    if (!snap.exists()) return showSearch(settings, "Document not found. Please check the ID and try again.");
+    if (!snap.exists()) return showSearch(settings, "Record not found. Please check the ID and try again.");
     showResult(settings, snap.data());
   } catch {
-    showSearch(settings, "Unable to look up that document right now.");
+    showSearch(settings, "Unable to look up that record right now.");
   }
 })();
