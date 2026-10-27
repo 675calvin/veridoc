@@ -1,0 +1,15 @@
+.admin{max-width:1000px;margin:0 auto;text-align:left}
+.admin .card{max-width:none;text-align:left;margin-bottom:24px}
+.admin h2{margin:0 0 16px}
+.admin label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:12px}
+.admin input,.admin select{display:block;width:100%;max-width:none;margin:4px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 16px}
+.warn-note{background:#fff7e0;border:1px solid #e6c36a;padding:10px 14px;border-radius:4px;font-size:.88rem;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:8px;border-bottom:1px solid #ddd;vertical-align:middle}
+td button{margin-right:6px}
+.small{font-size:.8rem;padding:4px 10px;border:1px solid #bbb;background:#fff;border-radius:4px;cursor:pointer}
+.link{background:none;border:0;color:var(--accent);cursor:pointer;font-size:1rem}
+.msg{margin:8px 0;min-height:1.2em}
+.pill{padding:2px 8px;border-radius:10px;color:#fff;font-size:.78rem}
+.pill.ok{background:#1f8a3f}.pill.bad{background:#c0392b}.pill.warn{background:#d98c00}

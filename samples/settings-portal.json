@@ -1,11 +1,15 @@
 {
   "orgName": "YOUR COMPANY NAME",
   "logoUrl": "https://REPLACE-WITH-YOUR-LOGO-DOWNLOAD-URL",
-  "headerText": "Results Page",
-  "tagline": "Your tagline here",
+  "headerText": "Verification Hub",
   "contactUrl": "https://example.com/contact",
-  "compareText": "Please compare the document you have to the original held in our register below. You may download the original for your copy.",
+  "compareText": "Please compare the record you have to the original held in our register below. You may download the original for your copy.",
   "successText": "Record found in our register",
-  "accentColor": "#0b5fff",
-  "accentColor2": "#5aa0ff"
+  "accentColor": "#058141",
+  "accentColor2": "#75b943",
+  "footerTagline": "Your tagline here",
+  "footerText": "\u00a9 COPYRIGHT | ALL RIGHTS RESERVED, YOUR COMPANY NAME",
+  "footerFont": "system",
+  "footerFontSize": 14,
+  "footerColor": "#666666"
 }

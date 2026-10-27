@@ -1,8 +1,25 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /branding/{file} { allow read: if true; allow write: if false; }
-    match /documents/{file} { allow read: if true; allow write: if false; }
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'check@veri.com' ||
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid)));
+    }
+
+    match /branding/{file} {
+      allow read: if true;
+      allow create, update: if isAdmin() && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 2 * 1024 * 1024;
+      allow delete: if isAdmin();
+    }
+    match /documents/{file} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.contentType == 'application/pdf'
+        && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if isAdmin();
+    }
     match /{allPaths=**} { allow read, write: if false; }
   }
 }

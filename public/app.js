@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { FONTS, DEFAULT_FOOTER } from "/shared.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyDHHcV4wm6DNg2ygrsdqUuRDBy3NmQ7aJo",
@@ -32,12 +33,25 @@ async function loadSettings() {
     const s = (await getDoc(doc(db, "settings", "portal"))).data() || {};
     if (s.accentColor) document.documentElement.style.setProperty("--accent", s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty("--accent2", s.accentColor2);
-    document.title = s.orgName ? `${s.orgName} – Document Verification` : document.title;
+    document.title = s.pageTitle || (s.orgName ? `${s.orgName} – Weapons & Credential Verification` : document.title);
+    const fav = safeUrl(s.faviconUrl);
+    if (fav) {
+      let l = document.querySelector("link[rel~='icon']");
+      if (!l) { l = document.createElement("link"); l.rel = "icon"; document.head.append(l); }
+      l.removeAttribute("type"); l.href = fav;
+    }
     document.getElementById("hdrTitle").textContent = s.headerText || "Results Page";
     const logo = safeUrl(s.logoUrl);
     if (logo) { const i = document.getElementById("hdrLogo"); i.src = logo; i.alt = s.orgName || ""; i.hidden = false; }
-    document.getElementById("ftTag").textContent = s.tagline || "";
-    document.getElementById("ftCopy").textContent = `© COPYRIGHT | ALL RIGHTS RESERVED, ${s.orgName || ""}`;
+    const footer = document.querySelector("footer");
+    const d = { ...DEFAULT_FOOTER, ...s };
+    footer.style.fontFamily = (FONTS[d.footerFont] || FONTS.system)[1];
+    const size = Number(d.footerFontSize);
+    footer.style.fontSize = (size >= 10 && size <= 40 ? size : DEFAULT_FOOTER.footerFontSize) + "px";
+    if (/^#[0-9a-f]{3,8}$/i.test(d.footerColor)) footer.style.color = d.footerColor;
+    document.getElementById("ftTag").textContent = s.footerTagline ?? s.tagline ?? "";
+    document.getElementById("ftCopy").textContent = s.footerText ??
+      `© COPYRIGHT | ALL RIGHTS RESERVED, ${s.orgName || ""}`;
     const c = document.getElementById("ftContact");
     if (s.contactUrl) c.append("Have a question? ", el("a", { href: safeUrl(s.contactUrl), textContent: "Contact us" }));
     return s;
@@ -45,19 +59,19 @@ async function loadSettings() {
 }
 
 function showSearch(settings, msg) {
-  const input = el("input", { placeholder: "Enter document ID", autofocus: true });
+  const input = el("input", { placeholder: "Enter reference ID", autofocus: true });
   const go = () => input.value.trim() && (location.href = "/v/" + encodeURIComponent(input.value.trim()));
   input.addEventListener("keydown", e => e.key === "Enter" && go());
   view.replaceChildren(el("div", { class: "card" },
-    el("h1", { textContent: "Verify a document" }),
+    el("h1", { textContent: "Verify a weapons record" }),
     msg ? el("p", { class: "bad", textContent: msg }) : "",
     input, el("br"), el("button", { class: "btn", textContent: "Verify", onclick: go })));
 }
 
 function statusOf(rec, settings) {
-  if ((rec.status || "valid").toLowerCase() === "revoked") return ["bad", "✕", "This document has been revoked"];
+  if ((rec.status || "valid").toLowerCase() === "revoked") return ["bad", "✕", "This authorisation has been revoked"];
   const exp = toDate(rec.expiryDate);
-  if (exp && exp < new Date()) return ["warn", "!", `This document expired on ${fmt(exp)}`];
+  if (exp && exp < new Date()) return ["warn", "!", `This authorisation expired on ${fmt(exp)}`];
   return ["ok", "✓", settings.successText || "Record found in our register"];
 }
 
@@ -83,7 +97,7 @@ function showDetails(settings, rec) {
     el("div", {},
       el("div", { class: "note", textContent: settings.compareText ||
         "Please compare the document you have to the original document held by the issuer below. You may download the original for your copy." }),
-      el("div", { class: "panel" }, el("h2", { textContent: "Document Details" }), rows)),
+      el("div", { class: "panel" }, el("h2", { textContent: "Record Details" }), rows)),
     el("div", {}, right)));
 }
 
@@ -93,9 +107,9 @@ function showDetails(settings, rec) {
   if (!id) return showSearch(settings);
   try {
     const snap = await getDoc(doc(db, "documents", id));
-    if (!snap.exists()) return showSearch(settings, "Document not found. Please check the ID and try again.");
+    if (!snap.exists()) return showSearch(settings, "Record not found. Please check the ID and try again.");
     showResult(settings, snap.data());
   } catch {
-    showSearch(settings, "Unable to look up that document right now.");
+    showSearch(settings, "Unable to look up that record right now.");
   }
 })();
